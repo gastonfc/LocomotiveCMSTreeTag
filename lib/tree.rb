@@ -4,10 +4,15 @@ class Tree < ::Liquid::Tag
         def _parse(context)
           unless @m_content_type
             if @markup =~ Syntax
-              @content_type_name = $1.gsub(/"|'/, '')
-              @m_content_type = context.registers[:site].content_types.where(slug: @content_type_name).first
+              @page = context.registers[:page]
+              @site = context.registers[:site]
 
-              # @source = ($1 || 'page').gsub(/"|'/, '')
+              @content_type_name = $1.gsub(/"|'/, '')
+              @m_content_type = @site.content_types.where(slug: @content_type_name).first
+              @content_type_page = @site.pages.where("slug.#{default_locale}" => @content_type_name).first
+
+              @page_entry = get_current_entry(context)
+
               @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false }
               @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
 
@@ -29,6 +34,7 @@ class Tree < ::Liquid::Tag
 
         def render(context)
           _parse(context)
+
           output = render_entry_children(context, nil, 1).join "\n"
 
           if @options[:no_wrapper] != 'true'
@@ -41,9 +47,34 @@ class Tree < ::Liquid::Tag
 
         private
 
+        # If the page is a template, it returns a string with the content-type currently showed
+        def get_current_content_type(context)
+          if @page.templatized?
+            @page['fullpath'][default_locale].gsub(/\/.*$/, '')
+          end
+        end
+
+        def default_locale
+          @site.default_locale
+        end
+
+        def get_current_entry(context)
+          entry_info = context['entry']
+          unless entry_info.nil?
+            current_content_type = get_current_content_type context
+            slug = entry_info._slug
+            entries = @site.content_types.where(slug: current_content_type).first.entries
+            entries.where(_slug: slug).first
+          end
+        end
+
         # Determines root node for the list
         def fetch_entries(context)
           @entries ||= @m_content_type.entries
+        end
+
+        # Returns the page template of tree's content_type
+        def get_tree_content_type_page(context)
         end
 
         # Returns a list element, a link to the page and its children
@@ -77,12 +108,24 @@ class Tree < ::Liquid::Tag
             children << '</ul>'
           end
 
+          # current_locale = context['locale']
+          # locale = (current_locale == default_locale) ? '' : current_locale
+
+          base = @site.localized_page_fullpath(@content_type_page)
+
+          href = File.join('/', base, entry._slug )
+
+          if entry == @page_entry
+            css << " #{@options[:active_class]}"
+          end
+
           ['<li', (%{ class="#{css}"} unless css.empty?), '>',
-           %{<a href="#{ File.join('/', @m_content_type.slug, entry._slug ) }">},
+           %{<a href="#{ href }">},
            entry.title,
            '</a>',
            children, '</li>'].flatten!.join ''
         end
+
 
         def render_children_for_page?(page, depth)
           depth.succ <= @options[:depth].to_i && page.children.reject { |c| !include_page?(c) }.any?
@@ -115,17 +158,6 @@ class Tree < ::Liquid::Tag
             end
           else
             page.title
-          end
-        end
-
-        # Determines whether or not a page should be a part of the menu
-        def include_page?(page)
-          if !page.listed? || page.templatized? || !page.published?
-            false
-          elsif @options[:exclude]
-            (page.fullpath =~ @options[:exclude]).nil?
-          else
-            true
           end
         end
 
