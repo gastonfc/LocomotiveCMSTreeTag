@@ -16,6 +16,10 @@ class Tree < ::Liquid::Tag
               @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false }
               @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
 
+              unless @options[:depth].kind_of? Numeric
+                @options[:depth] = Integer(@options[:depth], 10)
+              end
+
               @options[:exclude] = Regexp.new(@options[:exclude]) if @options[:exclude]
 
               @options[:add_attributes] = []
@@ -35,7 +39,7 @@ class Tree < ::Liquid::Tag
         def render(context)
           _parse(context)
 
-          output = render_entry_children(context, nil, Integer(@options[:depth], 10)).join "\n"
+          output = render_entry_children(context, nil, @options[:depth]).join "\n"
 
           if @options[:no_wrapper] != 'true'
             list_class  = !@options[:class].blank? ? %( class="#{@options[:class]}") : ''
@@ -73,12 +77,14 @@ class Tree < ::Liquid::Tag
           @entries ||= @m_content_type.entries
         end
 
-        # Returns the page template of tree's content_type
-        def get_tree_content_type_page(context)
-        end
+        def entry_in_active_branch?(context, entry)
+          if get_current_content_type(context) == @content_type_name
+            active_branch = @page_entry
+          else
+            active_branch = nil
 
-        def entry_in_active_branch?(entry)
-          active_branch = @page_entry
+          end
+
 
           while active_branch
             if entry == active_branch
@@ -129,7 +135,7 @@ class Tree < ::Liquid::Tag
 
           href = File.join('/', base, entry._slug )
 
-          if entry_in_active_branch?(entry)
+          if entry_in_active_branch?(context, entry)
             css << " #{@options[:active_class]}"
           end
 
