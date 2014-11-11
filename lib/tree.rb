@@ -13,7 +13,7 @@ class Tree < ::Liquid::Tag
 
               @page_entry = get_current_entry(context)
 
-              @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false }
+              @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false, submenu_prefix: '<u>..</u> ' }
               @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
 
               unless @options[:depth].kind_of? Numeric
@@ -39,7 +39,7 @@ class Tree < ::Liquid::Tag
         def render(context)
           _parse(context)
 
-          output = render_entry_children(context, nil, @options[:depth]).join "\n"
+          output = render_entry_children(context, nil, @options[:depth], '').join "\n"
 
           if @options[:no_wrapper] != 'true'
             list_class  = !@options[:class].blank? ? %( class="#{@options[:class]}") : ''
@@ -82,9 +82,7 @@ class Tree < ::Liquid::Tag
             active_branch = @page_entry
           else
             active_branch = nil
-
           end
-
 
           while active_branch
             if entry == active_branch
@@ -98,7 +96,7 @@ class Tree < ::Liquid::Tag
         end
 
         # Returns a list element, a link to the page and its children
-        def render_entry_link(context, entry, css, depth)
+        def render_entry_link(context, entry, css, depth, prefix)
           # selected = @page.fullpath =~ /^#{page.fullpath}(\/.*)?$/ ? " #{@options[:active_class]}" : ''
 
           # icon  = @options[:icon] ? '<span></span>' : ''
@@ -120,7 +118,7 @@ class Tree < ::Liquid::Tag
           # output << render_entry_children(context, page, depth.succ) if (depth.succ <= @options[:depth].to_i)
           # output << %{</li>}
 
-          children = render_entry_children(context, entry, depth - 1)
+          children = render_entry_children(context, entry, depth - 1, @options[:submenu_prefix])
 
           unless children.empty?
             submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
@@ -141,6 +139,7 @@ class Tree < ::Liquid::Tag
 
           ['<li>',
            %{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
+           prefix,
            entry.title,
            '</a>',
            children, '</li>'].flatten!.join ''
@@ -152,7 +151,7 @@ class Tree < ::Liquid::Tag
         end
 
         # Recursively creates a nested unordered list for the depth specified
-        def render_entry_children(context, entry, depth)
+        def render_entry_children(context, entry, depth, prefix)
 
           if depth > 0
 
@@ -170,7 +169,7 @@ class Tree < ::Liquid::Tag
               css << 'first' if children.first == c
               css << 'last'  if children.last  == c
 
-              render_entry_link(context, c, css.join(' '), depth)
+              render_entry_link(context, c, css.join(' '), depth, prefix)
             end
           else
             []
