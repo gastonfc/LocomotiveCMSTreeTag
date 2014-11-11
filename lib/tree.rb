@@ -77,6 +77,20 @@ class Tree < ::Liquid::Tag
         def get_tree_content_type_page(context)
         end
 
+        def entry_in_active_branch?(entry)
+          active_branch = @page_entry
+
+          while active_branch
+            if entry == active_branch
+              return true
+            else
+              active_branch = active_branch.parent
+            end
+          end
+
+          false
+        end
+
         # Returns a list element, a link to the page and its children
         def render_entry_link(context, entry, css, depth)
           # selected = @page.fullpath =~ /^#{page.fullpath}(\/.*)?$/ ? " #{@options[:active_class]}" : ''
@@ -115,12 +129,12 @@ class Tree < ::Liquid::Tag
 
           href = File.join('/', base, entry._slug )
 
-          if entry == @page_entry
+          if entry_in_active_branch?(entry)
             css << " #{@options[:active_class]}"
           end
 
-          ['<li', (%{ class="#{css}"} unless css.empty?), '>',
-           %{<a href="#{ href }">},
+          ['<li>',
+           %{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
            entry.title,
            '</a>',
            children, '</li>'].flatten!.join ''
@@ -137,7 +151,9 @@ class Tree < ::Liquid::Tag
           id = entry.id unless entry.nil?
 
           children = fetch_entries(context).where(parent_id: id) # find(entry[:children])
-          # children = fetch_entries(context).find(entry[:children])
+
+          # This probably could be improved
+          children = children.to_a.sort_by! { |x| x.position_in_parent }
 
           # children = page.children_with_minimal_attributes(@options[:add_attributes]).reject { |c| !include_page?(c) }
 
