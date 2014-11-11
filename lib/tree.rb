@@ -35,7 +35,7 @@ class Tree < ::Liquid::Tag
         def render(context)
           _parse(context)
 
-          output = render_entry_children(context, nil, 1).join "\n"
+          output = render_entry_children(context, nil, Integer(@options[:depth], 10)).join "\n"
 
           if @options[:no_wrapper] != 'true'
             list_class  = !@options[:class].blank? ? %( class="#{@options[:class]}") : ''
@@ -114,7 +114,7 @@ class Tree < ::Liquid::Tag
           # output << render_entry_children(context, page, depth.succ) if (depth.succ <= @options[:depth].to_i)
           # output << %{</li>}
 
-          children = render_entry_children(context, entry, depth)
+          children = render_entry_children(context, entry, depth - 1)
 
           unless children.empty?
             submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
@@ -148,21 +148,26 @@ class Tree < ::Liquid::Tag
         # Recursively creates a nested unordered list for the depth specified
         def render_entry_children(context, entry, depth)
 
-          id = entry.id unless entry.nil?
+          if depth > 0
 
-          children = fetch_entries(context).where(parent_id: id) # find(entry[:children])
+            id = entry.id unless entry.nil?
 
-          # This probably could be improved
-          children = children.to_a.sort_by! { |x| x.position_in_parent }
+            children = fetch_entries(context).where(parent_id: id) # find(entry[:children])
 
-          # children = page.children_with_minimal_attributes(@options[:add_attributes]).reject { |c| !include_page?(c) }
+            # This probably could be improved
+            children = children.to_a.sort_by! { |x| x.position_in_parent }
 
-          children.collect do |c|
-            css = []
-            css << 'first' if children.first == c
-            css << 'last'  if children.last  == c
+            # children = page.children_with_minimal_attributes(@options[:add_attributes]).reject { |c| !include_page?(c) }
 
-            render_entry_link(context, c, css.join(' '), depth)
+            children.collect do |c|
+              css = []
+              css << 'first' if children.first == c
+              css << 'last'  if children.last  == c
+
+              render_entry_link(context, c, css.join(' '), depth)
+            end
+          else
+            []
           end
         end
 
