@@ -81,7 +81,10 @@ class Tree < ::Liquid::Tag
           if get_current_content_type(context) == @content_type_name
             active_branch = @page_entry
           else
-            active_branch = nil
+            current_entry = context['entry']
+            method = @content_type_name.singularize
+            # puts "Current entry #{current_entry} method? (#{method}) #{current_entry[method]}"
+            active_branch = current_entry[method]
           end
 
           while active_branch
