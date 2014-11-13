@@ -88,18 +88,20 @@ class Tree < ::Liquid::Tag
           @entries ||= @tree_content_type.entries
         end
 
-        def entry_in_active_branch?(context, entry)
+        def tree_current_entry context
           if current_content_type == @tree_content_type_name
-            active_branch = @page_entry
+            @page_entry
           else
             current_entry = context['entry']
-            method = @tree_content_type_name.singularize
 
             if current_entry.respond_to? :[]
-              # puts "Current entry #{current_entry} method? (#{method}) #{current_entry[method]}"
-              active_branch = current_entry[method]
+              current_entry[@tree_content_type_name.singularize]
             end
           end
+        end
+
+        def entry_in_active_branch?(context, entry)
+          active_branch = tree_current_entry context
 
           while active_branch
             if entry == active_branch
