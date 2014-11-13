@@ -1,41 +1,6 @@
 class Tree < ::Liquid::Tag
         Syntax = /(#{::Liquid::Expression}+)?/
 
-        def _parse(context)
-          unless @m_content_type
-            if @markup =~ Syntax
-              @page = context.registers[:page]
-              @site = context.registers[:site]
-
-              @content_type_name = $1.gsub(/"|'/, '')
-              @m_content_type = @site.content_types.where(slug: @content_type_name).first
-              @content_type_page = @site.pages.where("slug.#{default_locale}" => @content_type_name).first
-
-              @page_entry = get_current_entry(context)
-
-              @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false, submenu_prefix: '<u>..</u> ' }
-              @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
-
-              unless @options[:depth].kind_of? Numeric
-                @options[:depth] = Integer(@options[:depth], 10)
-              end
-
-              @options[:exclude] = Regexp.new(@options[:exclude]) if @options[:exclude]
-
-              @options[:add_attributes] = []
-              if @options[:snippet]
-                template = @options[:snippet].include?('{') ? @options[:snippet] : context[:site].snippets.where(slug: @options[:snippet] ).try(:first).try(:template)
-                unless template.blank?
-                  @options[:liquid_render] = ::Liquid::Template.parse(template)
-                  @options[:add_attributes] = ['editable_elements']
-                end
-              end
-            else
-              raise ::Liquid::SyntaxError.new("Syntax Error in 'tree' - Valid syntax: tree")
-            end
-          end
-        end
-
         def render(context)
           _parse(context)
 
@@ -51,10 +16,24 @@ class Tree < ::Liquid::Tag
 
         private
 
-        # If the page is a template, it returns a string with the content-type currently showed
-        def get_current_content_type(context)
-          if @page.templatized?
-            @page['fullpath'][default_locale].gsub(/\/.*$/, '')
+
+        def build_options context
+          @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false, submenu_prefix: '<u>..</u> ' }
+          @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
+
+          unless @options[:depth].kind_of? Numeric
+            @options[:depth] = Integer(@options[:depth], 10)
+          end
+
+          @options[:exclude] = Regexp.new(@options[:exclude]) if @options[:exclude]
+
+          @options[:add_attributes] = []
+          if @options[:snippet]
+            template = @options[:snippet].include?('{') ? @options[:snippet] : context[:site].snippets.where(slug: @options[:snippet] ).try(:first).try(:template)
+            unless template.blank?
+              @options[:liquid_render] = ::Liquid::Template.parse(template)
+              @options[:add_attributes] = ['editable_elements']
+            end
           end
         end
 
@@ -62,10 +41,42 @@ class Tree < ::Liquid::Tag
           @site.default_locale
         end
 
+        def get_content_type_object content_type_name
+          @site.content_types.where(slug: content_type_name).first
+        end
+
+        def get_content_type_template content_type_name
+          @site.pages.where("slug.#{default_locale}" => content_type_name).first
+        end
+
+        def _parse(context)
+          unless @site
+            if @markup =~ Syntax
+              @site = context.registers[:site]
+              @page = context.registers[:page] # Current page 
+
+              @tree_content_type_name = $1.gsub(/"|'/, '')
+              @tree_content_type = get_content_type_object @tree_content_type_name
+
+              @page_entry = get_current_entry context
+
+              build_options context
+            else
+              raise ::Liquid::SyntaxError.new("Syntax Error in 'tree'")
+            end
+          end
+        end
+
+        # If the page is a template, it returns a string with the content-type currently shown
+        def current_content_type
+          if @page.templatized?
+            @page['fullpath'][default_locale].gsub(/\/.*$/, '')
+          end
+        end
+
         def get_current_entry(context)
           entry_info = context['entry']
           unless entry_info.nil?
-            current_content_type = get_current_content_type context
             slug = entry_info._slug
             entries = @site.content_types.where(slug: current_content_type).first.entries
             entries.where(_slug: slug).first
@@ -74,15 +85,15 @@ class Tree < ::Liquid::Tag
 
         # Determines root node for the list
         def fetch_entries(context)
-          @entries ||= @m_content_type.entries
+          @entries ||= @tree_content_type.entries
         end
 
         def entry_in_active_branch?(context, entry)
-          if get_current_content_type(context) == @content_type_name
+          if current_content_type == @tree_content_type_name
             active_branch = @page_entry
           else
             current_entry = context['entry']
-            method = @content_type_name.singularize
+            method = @tree_content_type_name.singularize
 
             if current_entry.respond_to? :[]
               # puts "Current entry #{current_entry} method? (#{method}) #{current_entry[method]}"
@@ -132,10 +143,7 @@ class Tree < ::Liquid::Tag
             children << '</ul>'
           end
 
-          # current_locale = context['locale']
-          # locale = (current_locale == default_locale) ? '' : current_locale
-
-          base = @site.localized_page_fullpath(@content_type_page)
+          base = @site.localized_page_fullpath(get_content_type_template @tree_content_type_name)
 
           href = File.join('/', base, entry._slug )
 
