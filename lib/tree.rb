@@ -4,7 +4,8 @@ class Tree < ::Liquid::Tag
         def render(context)
           _parse(context)
 
-          output = render_entry_children(context, nil, @options[:depth], '').join "\n"
+          branch = current_tree_entry_branch context
+          output = render_entry_children(context, branch, nil, '').join "\n"
 
           if @options[:no_wrapper] != 'true'
             list_class  = !@options[:class].blank? ? %( class="#{@options[:class]}") : ''
@@ -88,7 +89,7 @@ class Tree < ::Liquid::Tag
           @entries ||= @tree_content_type.entries
         end
 
-        def tree_current_entry context
+        def current_tree_entry context
           if current_content_type == @tree_content_type_name
             @page_entry
           else
@@ -100,22 +101,22 @@ class Tree < ::Liquid::Tag
           end
         end
 
-        def entry_in_active_branch?(context, entry)
-          active_branch = tree_current_entry context
+        # Returns an array with the path from the current entry
+        # (first element) to the root of the tree
+        def current_tree_entry_branch context
+          branch = []
+          active_branch = current_tree_entry context
 
           while active_branch
-            if entry == active_branch
-              return true
-            else
-              active_branch = active_branch.parent
-            end
+            branch << active_branch
+            active_branch = active_branch.parent
           end
 
-          false
+          branch
         end
 
         # Returns a list element, a link to the page and its children
-        def render_entry_link(context, entry, css, depth, prefix)
+        def render_entry_link(context, branch, entry, css, prefix)
           # selected = @page.fullpath =~ /^#{page.fullpath}(\/.*)?$/ ? " #{@options[:active_class]}" : ''
 
           # icon  = @options[:icon] ? '<span></span>' : ''
@@ -137,21 +138,25 @@ class Tree < ::Liquid::Tag
           # output << render_entry_children(context, page, depth.succ) if (depth.succ <= @options[:depth].to_i)
           # output << %{</li>}
 
-          children = render_entry_children(context, entry, depth - 1, @options[:submenu_prefix])
+          selected = branch.include? entry
 
-          unless children.empty?
-            submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
-            children.insert(0, ['<ul', submenu_class, '>'])
-            children << '</ul>'
+          if selected
+            children = render_entry_children(context, branch, entry, @options[:submenu_prefix])
+
+            unless children.empty?
+              submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
+              children.insert(0, ['<ul', submenu_class, '>'])
+              children << '</ul>'
+            end
+
+            css << " #{@options[:active_class]}"
+          else
+            children = []
           end
 
           base = @site.localized_page_fullpath(get_content_type_template @tree_content_type_name)
 
           href = File.join('/', base, entry._slug )
-
-          if entry_in_active_branch?(context, entry)
-            css << " #{@options[:active_class]}"
-          end
 
           ['<li>',
            %{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
@@ -167,28 +172,23 @@ class Tree < ::Liquid::Tag
         end
 
         # Recursively creates a nested unordered list for the depth specified
-        def render_entry_children(context, entry, depth, prefix)
+        def render_entry_children(context, branch, entry, prefix)
 
-          if depth > 0
+          id = entry.id unless entry.nil?
 
-            id = entry.id unless entry.nil?
+          children = fetch_entries(context).where(parent_id: id) # find(entry[:children])
 
-            children = fetch_entries(context).where(parent_id: id) # find(entry[:children])
+          # This probably could be improved
+          children = children.to_a.sort_by! { |x| x.position_in_parent }
 
-            # This probably could be improved
-            children = children.to_a.sort_by! { |x| x.position_in_parent }
+          # children = page.children_with_minimal_attributes(@options[:add_attributes]).reject { |c| !include_page?(c) }
 
-            # children = page.children_with_minimal_attributes(@options[:add_attributes]).reject { |c| !include_page?(c) }
+          children.collect do |c|
+            css = []
+            css << 'first' if children.first == c
+            css << 'last'  if children.last  == c
 
-            children.collect do |c|
-              css = []
-              css << 'first' if children.first == c
-              css << 'last'  if children.last  == c
-
-              render_entry_link(context, c, css.join(' '), depth, prefix)
-            end
-          else
-            []
+            render_entry_link(context, branch, c, css.join(' '), prefix)
           end
         end
 
