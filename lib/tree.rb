@@ -5,7 +5,7 @@ class Tree < ::Liquid::Tag
           _parse(context)
 
           branch = current_tree_entry_branch context
-          output = render_entry_children(context, branch, nil, '').join "\n"
+          output = render_entry_children(context, branch).join "\n"
 
           if @options[:no_wrapper] != 'true'
             list_class  = !@options[:class].blank? ? %( class="#{@options[:class]}") : ''
@@ -115,8 +115,15 @@ class Tree < ::Liquid::Tag
           branch
         end
 
-        # Returns a list element, a link to the page and its children
-        def render_entry_link(context, branch, entry, css, prefix)
+        # Returns the html code of a tree node
+        #
+        # [context] liquid's context for this tag
+        # [branch] an array containg the result of *current_Tree_entry_branch*
+        # [entry] the tree node 
+        # [css] a string with classes for this node
+        # [prefix] a string to prepend to each node title
+        # [holder] it the parent node has the holder attribute, the _slug of it, nil otherwise.
+        def render_entry_link(context, branch, entry, css, prefix, holder)
           # selected = @page.fullpath =~ /^#{page.fullpath}(\/.*)?$/ ? " #{@options[:active_class]}" : ''
 
           # icon  = @options[:icon] ? '<span></span>' : ''
@@ -141,7 +148,14 @@ class Tree < ::Liquid::Tag
           selected = branch.include? entry
 
           if selected
-            children = render_entry_children(context, branch, entry, @options[:submenu_prefix])
+
+            if holder
+              node_holder = holder
+            else
+              node_holder = entry._slug if (entry.respond_to? :holder) and entry.holder
+            end
+
+            children = render_entry_children(context, branch, entry, @options[:submenu_prefix], node_holder)
 
             unless children.empty?
               submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
@@ -156,7 +170,11 @@ class Tree < ::Liquid::Tag
 
           base = @site.localized_page_fullpath(get_content_type_template @tree_content_type_name)
 
-          href = File.join('/', base, entry._slug )
+          if holder
+            href = File.join('/', base, "#{holder}\##{entry._slug}" )
+          else
+            href = File.join('/', base, entry._slug )
+          end
 
           ['<li>',
            %{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
@@ -171,10 +189,16 @@ class Tree < ::Liquid::Tag
           depth.succ <= @options[:depth].to_i && page.children.reject { |c| !include_page?(c) }.any?
         end
 
-        # Recursively creates a nested unordered list for the depth specified
-        def render_entry_children(context, branch, entry, prefix)
+        # Returns the children's html code of the parent parameter
+        #
+        # [context] liquid's context for this tag
+        # [branch] an array containg the result of *current_Tree_entry_branch*
+        # [parent] the parent entry node
+        # [prefix] a string to prepend to each node title
+        # [holder] it the parent node has the holder attribute, the _slug of it, nil otherwise.
+        def render_entry_children(context, branch, parent=nil, prefix='', holder=nil)
 
-          id = entry.id unless entry.nil?
+          id = parent.id unless parent.nil?
 
           children = fetch_entries(context).where(parent_id: id) # find(entry[:children])
 
@@ -188,7 +212,7 @@ class Tree < ::Liquid::Tag
             css << 'first' if children.first == c
             css << 'last'  if children.last  == c
 
-            render_entry_link(context, branch, c, css.join(' '), prefix)
+            render_entry_link(context, branch, c, css.join(' '), prefix, holder)
           end
         end
 
