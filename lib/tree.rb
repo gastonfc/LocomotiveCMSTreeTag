@@ -46,8 +46,8 @@ class Tree < ::Liquid::Tag
           @site.content_types.where(slug: content_type_name).first
         end
 
-        def get_content_type_template content_type_name
-          @site.pages.where("slug.#{default_locale}" => content_type_name).first
+        def get_content_type_template content_type
+          @site.pages.where(target_klass_name: content_type.entries_class_name , templatized: true).first
         end
 
         def _parse(context)
@@ -68,7 +68,7 @@ class Tree < ::Liquid::Tag
           end
         end
 
-        # If the page is a template, it returns a string with the content-type currently shown
+        # If the page is a template, it returns the related content_type
         def current_content_type
           if @page.templatized?
             @page['fullpath'][default_locale].gsub(/\/.*$/, '')
@@ -168,7 +168,7 @@ class Tree < ::Liquid::Tag
             children = []
           end
 
-          base = @site.localized_page_fullpath(get_content_type_template @tree_content_type_name)
+          base = @site.localized_page_fullpath(get_content_type_template @tree_content_type).gsub(/\/[^\/]*$/, '')
 
           if holder
             href = File.join('/', base, "#{holder}\##{entry._slug}" )
