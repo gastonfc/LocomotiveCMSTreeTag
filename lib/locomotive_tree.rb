@@ -1,4 +1,7 @@
-class Tree < ::Liquid::Tag
+require "locomotive_tree/version"
+
+module LocomotiveTree
+    class Tree < ::Liquid::Tag
         Syntax = /(#{::Liquid::Expression}+)?/
 
         def render(context)
@@ -230,7 +233,7 @@ class Tree < ::Liquid::Tag
         def bootstrap?
           @options[:bootstrap] == 'true'
         end
+    end
 
 end
-
-::Liquid::Template.register_tag('tree', Tree)
+::Liquid::Template.register_tag('tree', LocomotiveTree::Tree)
