@@ -5,7 +5,15 @@ describe LocomotiveTree do
     expect(LocomotiveTree::VERSION).not_to be nil
   end
 
-  it 'does something useful' do
-    expect(false).to eq(true)
+  it 'should register a tree tag in Liquid' do
+    expect(::Liquid::Template.tags).to include('tree' => LocomotiveTree::Tree)
+  end
+
+  context 'setup liquid context' do 
+
+    before(:each) do
+
+    end
+
   end
 end

@@ -1,6 +1,9 @@
 require "locomotive_tree/version"
+require "mongoid"
+require "locomotive_liquid"
 
 module LocomotiveTree
+
     class Tree < ::Liquid::Tag
         Syntax = /(#{::Liquid::Expression}+)?/
 
