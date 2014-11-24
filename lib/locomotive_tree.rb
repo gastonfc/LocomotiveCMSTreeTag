@@ -25,7 +25,7 @@ module LocomotiveTree
 
 
         def build_options context
-          @options = { id: 'nav', depth: 1, class: '', active_class: 'on', bootstrap: false, submenu_prefix: '<u>..</u> ' }
+          @options = { id: 'nav', depth: 1, class: '', active_class: 'on', submenu_prefix: '<u>..</u> ' }
           @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
 
           unless @options[:depth].kind_of? Numeric
@@ -53,7 +53,7 @@ module LocomotiveTree
         end
 
         def get_content_type_template content_type
-          @site.pages.where(target_klass_name: content_type.entries_class_name , templatized: true).first
+          @site.pages.where(target_klass_name: content_type.entries_class_name, templatized: true).first
         end
 
         def _parse(context)
@@ -125,31 +125,11 @@ module LocomotiveTree
         #
         # [context] liquid's context for this tag
         # [branch] an array containg the result of *current_Tree_entry_branch*
-        # [entry] the tree node 
+        # [entry] the tree node
         # [css] a string with classes for this node
         # [prefix] a string to prepend to each node title
         # [holder] it the parent node has the holder attribute, the _slug of it, nil otherwise.
         def render_entry_link(context, branch, entry, css, prefix, holder)
-          # selected = @page.fullpath =~ /^#{page.fullpath}(\/.*)?$/ ? " #{@options[:active_class]}" : ''
-
-          # icon  = @options[:icon] ? '<span></span>' : ''
-          # title = render_title(context, page)
-          # label = %{#{icon if @options[:icon] != 'after' }#{title}#{icon if @options[:icon] == 'after' }}
-
-          # link_options = caret = ''
-          # href = File.join('/', @site.localized_page_fullpath(page))
-
-          # if render_children_for_page?(page, depth) && bootstrap?
-          #   css           += ' dropdown'
-          #   link_options  = %{ class="dropdown-toggle" data-toggle="dropdown"}
-          #   href          = '#'
-          #   caret         = %{ <b class="caret"></b>}
-          # end
-
-          # output  = %{<li id="#{page.slug.to_s.dasherize}-link" class="link#{selected} #{css}">}
-          # output << %{<a href="#{href}"#{link_options}>#{label}#{caret}</a>}
-          # output << render_entry_children(context, page, depth.succ) if (depth.succ <= @options[:depth].to_i)
-          # output << %{</li>}
 
           selected = branch.include? entry
 
@@ -190,12 +170,7 @@ module LocomotiveTree
            children, '</li>'].flatten!.join ''
         end
 
-
-        def render_children_for_page?(page, depth)
-          depth.succ <= @options[:depth].to_i && page.children.reject { |c| !include_page?(c) }.any?
-        end
-
-        # Returns the children's html code of the parent parameter
+        # Returns the children's html code of the parent node parameter
         #
         # [context] liquid's context for this tag
         # [branch] an array containg the result of *current_Tree_entry_branch*
@@ -222,20 +197,6 @@ module LocomotiveTree
           end
         end
 
-        def render_title(context, page)
-          if @options[:liquid_render]
-            context.stack do
-              context['page'] = page
-              @options[:liquid_render].render(context)
-            end
-          else
-            page.title
-          end
-        end
-
-        def bootstrap?
-          @options[:bootstrap] == 'true'
-        end
     end
 
 end
