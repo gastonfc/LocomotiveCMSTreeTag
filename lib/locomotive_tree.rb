@@ -197,7 +197,6 @@ module LocomotiveTree
           end
         end
 
+        ::Liquid::Template.register_tag('tree', Tree)
     end
-
 end
-::Liquid::Template.register_tag('tree', LocomotiveTree::Tree)
