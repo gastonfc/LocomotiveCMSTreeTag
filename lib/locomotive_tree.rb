@@ -25,7 +25,7 @@ module LocomotiveTree
 
 
         def build_options context
-          @options = { id: 'nav', depth: 1, class: '', active_class: 'on', submenu_prefix: '' }
+          @options = { id: 'nav', depth: 1, class: '', active_class: 'on' }
           @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
         end
 
@@ -112,9 +112,8 @@ module LocomotiveTree
         # [branch] an array containg the result of *current_tree_entry_branch*
         # [entry] the tree node
         # [css] a string with classes for this node
-        # [prefix] a string to prepend to each node title
         # [holder] if the parent node has the holder attribute, the _slug of it, nil otherwise.
-        def render_entry_link(context, branch, entry, css, prefix, holder)
+        def render_entry_link(context, branch, entry, css, holder)
 
           selected = branch.include? entry
 
@@ -126,7 +125,7 @@ module LocomotiveTree
               node_holder = entry._slug if (entry.respond_to? :holder) and entry.holder
             end
 
-            children = render_entry_children(context, branch, entry, @options[:submenu_prefix], node_holder)
+            children = render_entry_children(context, branch, entry, node_holder)
 
             unless children.empty?
               submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
@@ -149,7 +148,6 @@ module LocomotiveTree
 
           ['<li>',
            %{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
-           prefix,
            entry.title,
            '</a>',
            children, '</li>'].flatten!.join ''
@@ -160,9 +158,8 @@ module LocomotiveTree
         # [context] liquid's context for this tag
         # [branch] an array containg the result of *current_tree_entry_branch*
         # [parent] the parent entry node
-        # [prefix] a string to prepend to each node title
         # [holder] if the parent node has the holder attribute, the _slug of it, nil otherwise.
-        def render_entry_children(context, branch, parent=nil, prefix='', holder=nil)
+        def render_entry_children(context, branch, parent=nil, holder=nil)
 
           id = parent.id unless parent.nil?
 
@@ -178,7 +175,7 @@ module LocomotiveTree
             css << 'first' if children.first == c
             css << 'last'  if children.last  == c
 
-            render_entry_link(context, branch, c, css.join(' '), prefix, holder)
+            render_entry_link(context, branch, c, css.join(' '), holder)
           end
         end
 
