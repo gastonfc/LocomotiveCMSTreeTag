@@ -25,23 +25,8 @@ module LocomotiveTree
 
 
         def build_options context
-          @options = { id: 'nav', depth: 1, class: '', active_class: 'on', submenu_prefix: '<u>..</u> ' }
+          @options = { id: 'nav', depth: 1, class: '', active_class: 'on', submenu_prefix: '' }
           @markup.scan(::Liquid::TagAttributes) { |key, value| @options[key.to_sym] = value.gsub(/"|'/, '') }
-
-          unless @options[:depth].kind_of? Numeric
-            @options[:depth] = Integer(@options[:depth], 10)
-          end
-
-          @options[:exclude] = Regexp.new(@options[:exclude]) if @options[:exclude]
-
-          @options[:add_attributes] = []
-          if @options[:snippet]
-            template = @options[:snippet].include?('{') ? @options[:snippet] : context[:site].snippets.where(slug: @options[:snippet] ).try(:first).try(:template)
-            unless template.blank?
-              @options[:liquid_render] = ::Liquid::Template.parse(template)
-              @options[:add_attributes] = ['editable_elements']
-            end
-          end
         end
 
         def default_locale
@@ -65,7 +50,7 @@ module LocomotiveTree
               @tree_content_type_name = $1.gsub(/"|'/, '')
               @tree_content_type = get_content_type_object @tree_content_type_name
 
-              @page_entry = get_current_entry context
+              @page_entry = get_current_entry_s_page context
 
               build_options context
             else
@@ -81,7 +66,7 @@ module LocomotiveTree
           end
         end
 
-        def get_current_entry(context)
+        def get_current_entry_s_page(context)
           entry_info = context['entry']
           unless entry_info.nil?
             slug = entry_info._slug
@@ -124,11 +109,11 @@ module LocomotiveTree
         # Returns the html code of a tree node
         #
         # [context] liquid's context for this tag
-        # [branch] an array containg the result of *current_Tree_entry_branch*
+        # [branch] an array containg the result of *current_tree_entry_branch*
         # [entry] the tree node
         # [css] a string with classes for this node
         # [prefix] a string to prepend to each node title
-        # [holder] it the parent node has the holder attribute, the _slug of it, nil otherwise.
+        # [holder] if the parent node has the holder attribute, the _slug of it, nil otherwise.
         def render_entry_link(context, branch, entry, css, prefix, holder)
 
           selected = branch.include? entry
@@ -173,10 +158,10 @@ module LocomotiveTree
         # Returns the children's html code of the parent node parameter
         #
         # [context] liquid's context for this tag
-        # [branch] an array containg the result of *current_Tree_entry_branch*
+        # [branch] an array containg the result of *current_tree_entry_branch*
         # [parent] the parent entry node
         # [prefix] a string to prepend to each node title
-        # [holder] it the parent node has the holder attribute, the _slug of it, nil otherwise.
+        # [holder] if the parent node has the holder attribute, the _slug of it, nil otherwise.
         def render_entry_children(context, branch, parent=nil, prefix='', holder=nil)
 
           id = parent.id unless parent.nil?
