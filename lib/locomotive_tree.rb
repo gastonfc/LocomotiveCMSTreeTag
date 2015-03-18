@@ -11,6 +11,7 @@ module LocomotiveTree
           _parse(context)
 
           branch = current_tree_entry_branch context
+          @prof = 0
           output = render_entry_children(context, branch).join "\n"
 
           if @options[:no_wrapper] != 'true'
@@ -124,11 +125,12 @@ module LocomotiveTree
             else
               node_holder = entry._slug if (entry.respond_to? :holder) and entry.holder
             end
-
+            @prof = @prof + 1
             children = render_entry_children(context, branch, entry, node_holder)
-
+            @prof = @prof - 1
             unless children.empty?
-              submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
+              #submenu_class = !@options[:sub_class].blank? ? %( class="#{@options[:sub_class]}") : ''
+              submenu_class = " style='list-style: outside none none;padding: 0;margin: 5px 0px 10px 0px;'"
               children.insert(0, ['<ul', submenu_class, '>'])
               children << '</ul>'
             end
@@ -145,9 +147,16 @@ module LocomotiveTree
           else
             href = File.join('/', base, entry._slug )
           end
-
+          if @prof == 0
+            link_a_class = " style='display: block;line-height: 1.8em;font-size:1em;text-transform: uppercase;'" unless selected
+            link_a_class = " style='display: block;line-height: 1.8em;font-size:1em;text-transform: uppercase;font-weight: bold;'" if selected
+          else
+            link_a_class = " style='display: block;font-size: 0.8em;line-height: 1.8em;padding-left: #{@prof*10}px;text-transform: capitalize;'" unless selected
+            link_a_class = " style='display: block;font-size: 0.8em;line-height: 1.8em;padding-left: #{@prof*10}px;text-transform: capitalize;font-weight: bold;'" if selected
+          end
           ['<li>',
-           %{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
+           #%{<a href="#{ href }"}, (%{ class="#{css}"} unless css.empty?), '>',
+           %{<a href="#{ href }"}, (%{ "#{link_a_class}" }), '>',
            entry.title,
            '</a>',
            children, '</li>'].flatten!.join ''
@@ -169,7 +178,6 @@ module LocomotiveTree
           children = children.to_a.sort_by! { |x| x.position_in_parent }
 
           # children = page.children_with_minimal_attributes(@options[:add_attributes]).reject { |c| !include_page?(c) }
-
           children.collect do |c|
             css = []
             css << 'first' if children.first == c
